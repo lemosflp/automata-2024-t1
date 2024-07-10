@@ -1,11 +1,10 @@
-"""Implementação de autômatos finitos."""
-
+# Módulo automata.py
 
 def load_automata(filename):
     """
     Lê os dados de um autômato finito a partir de um arquivo.
 
-    A estsrutura do arquivo deve ser:
+    A estrutura do arquivo deve ser:
 
     <lista de símbolos do alfabeto, separados por espaço (' ')>
     <lista de nomes de estados>
@@ -30,21 +29,60 @@ def load_automata(filename):
     q3 b q2
     ```
 
-    Caso o arquivo seja inválido uma exceção Exception é gerada.
-
+    Caso o arquivo seja inválido, uma exceção ValueError é gerada.
     """
+    with open(filename, "rt", encoding="utf-8") as file:
+        lines = file.readlines()
 
-    with open(filename, "rt") as arquivo:
-        # processa arquivo...
-        pass
+    # Validação e extração dos dados do arquivo
+    try:
+        sigma = lines[0].strip().split()
+        states = lines[1].strip().split()
+        final_states = lines[2].strip().split()
+        initial_state = lines[3].strip()
+
+        # Verifica se os estados inicial e finais estão na lista de estados
+        if initial_state not in states or any(f not in states for f in final_states):
+            raise ValueError("Estado inicial ou estado final inválido.")
+
+        delta = {}
+        for line in lines[4:]:
+            origin, symbol, destination = line.strip().split()
+            if origin not in states or destination not in states or symbol not in sigma:
+                raise ValueError("Transição inválida.")
+            delta.setdefault(origin, {})[symbol] = destination
+
+        # Retorna a estrutura do autômato
+        return states, sigma, delta, initial_state, final_states
+
+    except Exception as e:
+        raise ValueError("Formato inválido do arquivo de autômato.") from e
 
 
-def process(automata, words):
+def process(automaton, words):
     """
-    Processa a lista de palavras e retora o resultado.
-    
-    Os resultados válidos são ACEITA, REJEITA, INVALIDA.
+    Processa a lista de palavras utilizando o autômato fornecido e retorna um mapa associando cada palavra
+    ao resultado do autômato (ACEITA, REJEITA, ou INVALIDA).
+
+    :param automaton: Tupla contendo (Q, Sigma, delta, q0, F)
+    :param words: Lista de palavras a serem processadas
+    :return: Dicionário associando cada palavra ao seu resultado no autômato
     """
+    states, sigma, delta, initial_state, final_states = automaton
+    result = {}
 
     for word in words:
-        # tenta reconhecer `word`
+        current_state = initial_state
+        valid = True
+
+        for letter in word:
+            if letter not in sigma:
+                result[word] = 'INVALIDA'
+                valid = False
+                break
+            current_state = delta.get(current_state, {}).get(letter, 'REJEITA')
+
+        if valid:
+            result[word] = 'ACEITA' if current_state in final_states else 'REJEITA'
+
+    return result
